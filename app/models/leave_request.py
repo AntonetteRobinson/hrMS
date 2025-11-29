@@ -12,4 +12,4 @@ class LeaveRequest(SQLModel, table=True):
     start_date: date
     end_date: date
     status: LeaveStatus = LeaveStatus.PENDING
-    sick_note: SickDocument
+    sick_note: SickDocument | None
