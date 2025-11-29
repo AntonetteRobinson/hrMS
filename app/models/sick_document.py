@@ -1,4 +1,5 @@
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
+
 
 
 class SickDocument(SQLModel, table=True):
@@ -6,3 +7,5 @@ class SickDocument(SQLModel, table=True):
     leave_id: int = Field(foreign_key="leaverequest.id", index=True)
     file_path: str
     file_name: str
+
+    leave_request: "LeaveRequest | None" = Relationship(back_populates="sick_note")

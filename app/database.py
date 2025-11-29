@@ -1,4 +1,6 @@
 from sqlmodel import create_engine, SQLModel, Session
+from app.models import *
+
 
 db_filename = "database.db"
 sqlite_url = f"sqlite:///{db_filename}"

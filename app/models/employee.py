@@ -1,9 +1,7 @@
-from sqlmodel import SQLModel, Field, Session
+from sqlmodel import SQLModel, Field, Relationship
 from datetime import date
 
 from app.models.enums import PaymentType
-from app.models.leave_balance import LeaveBalance
-from app.models.leave_request import LeaveRequest
 
 
 class Employee(SQLModel, table=True):
@@ -12,6 +10,7 @@ class Employee(SQLModel, table=True):
     email: str = Field(unique=True, index=True)
     type: PaymentType
     date_hired: date
-    leave_requests: list[LeaveRequest]
-    leave_balances: list[LeaveBalance]
+
+    leave_requests: list["LeaveRequest"] = Relationship(back_populates="employee")
+    leave_balances: list["LeaveBalance"] = Relationship(back_populates="employee")
 

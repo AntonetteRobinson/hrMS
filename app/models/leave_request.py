@@ -1,8 +1,7 @@
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
 from datetime import date
 
 from app.models.enums import LeaveType, LeaveStatus
-from app.models.sick_document import SickDocument
 
 
 class LeaveRequest(SQLModel, table=True):
@@ -12,4 +11,6 @@ class LeaveRequest(SQLModel, table=True):
     start_date: date
     end_date: date
     status: LeaveStatus = LeaveStatus.PENDING
-    sick_note: SickDocument | None
+
+    employee: "Employee | None" = Relationship(back_populates="leave_requests")
+    sick_note: list["SickDocument"] = Relationship(back_populates="leave_request")

@@ -2,11 +2,11 @@ import uvicorn
 from fastapi import FastAPI
 
 from app.controllers import employee_controller
-from app.database import init_db, init_session
+from app.database import init_db
 
 app = FastAPI()
 
-app.include_router(employee_controller.router)
+app.include_router(employee_controller.employee_router)
 
 init_db()
 
