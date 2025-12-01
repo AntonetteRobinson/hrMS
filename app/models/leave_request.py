@@ -1,3 +1,5 @@
+from typing import Optional
+
 from sqlmodel import SQLModel, Field, Relationship
 from datetime import date
 
@@ -12,5 +14,5 @@ class LeaveRequest(SQLModel, table=True):
     end_date: date
     status: LeaveStatus = LeaveStatus.PENDING
 
-    employee: "Employee | None" = Relationship(back_populates="leave_requests")
+    employee: Optional["Employee"] = Relationship(back_populates="leave_requests")
     sick_note: list["SickDocument"] = Relationship(back_populates="leave_request")

@@ -87,7 +87,7 @@ class EmployeeService:
             sick_balance = LeaveBalance(
                 employee_id=employee.id,
                 year=year,
-                leave_type=LeaveType.VACATION,
+                leave_type=LeaveType.SICK,
                 entitled_days=sick_days,
                 remaining_days=sick_days
             )

@@ -1,3 +1,5 @@
+from typing import Optional
+
 from sqlmodel import SQLModel, Field, Relationship
 
 
@@ -8,4 +10,4 @@ class SickDocument(SQLModel, table=True):
     file_path: str
     file_name: str
 
-    leave_request: "LeaveRequest | None" = Relationship(back_populates="sick_note")
+    leave_request: Optional["LeaveRequest"] = Relationship(back_populates="sick_note")

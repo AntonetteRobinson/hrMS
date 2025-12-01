@@ -1,0 +1,14 @@
+### GET request
+GET http://localhost:8000/employees
+
+### POST request
+POST http://localhost:8000/employees/add
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "jane.doe@gmail.com",
+  "type": "monthly",
+  "date_hired": "2021-06-15"
+}
+
