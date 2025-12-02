@@ -5,6 +5,9 @@ from app.controllers.employee_controller import employee_router
 from app.controllers.hr_controller import hr_router
 from app.controllers.leave_requests_controller import leave_request_router
 from app.controllers.reports_controller import reports_router
+from app.controllers.sickDocUpload import sick_document_router
+
+
 
 app = FastAPI()
 
@@ -12,6 +15,7 @@ app.include_router(employee_router)
 app.include_router(hr_router)
 app.include_router(leave_request_router)
 app.include_router(reports_router)
+app.include_router(sick_document_router)
 
 
 if __name__ == "__main__":
