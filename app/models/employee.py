@@ -1,16 +1,12 @@
-from sqlmodel import SQLModel, Field, Relationship
+from pydantic import BaseModel, Field
 from datetime import date
 
 from app.models.enums import PaymentType
+from app.models.leave_balance import LeaveBalance
 
-
-class Employee(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
+class Employee(BaseModel):
+    id: int
     name: str
-    email: str = Field(unique=True, index=True)
+    email: str
     type: PaymentType
     date_hired: date
-
-    leave_requests: list["LeaveRequest"] = Relationship(back_populates="employee")
-    leave_balances: list["LeaveBalance"] = Relationship(back_populates="employee")
-

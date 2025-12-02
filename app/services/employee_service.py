@@ -1,10 +1,12 @@
 from datetime import date
 
-from sqlmodel import Session, select
-
-from app.models.employee import Employee
+import app.database as db
 from app.models.enums import PaymentType, LeaveType
 from app.models.leave_balance import LeaveBalance
+
+def parse_date(d) -> date:
+    """Convert string to date"""
+    return date.fromisoformat(d) if isinstance(d, str) else d
 
 
 class EmployeeService:
@@ -40,57 +42,53 @@ class EmployeeService:
         return 10 if years >= 1 else 0
 
     @staticmethod
-    def init_leave_balance(session: Session, employee: Employee, year: int) -> None:
+    def init_leave_balance(employee: dict, year: int) -> None:
         """Initializes/updates the leave balances for an employee for a given year"""
 
         # Calculate the leave entitlements for employee
-        vacation_days = EmployeeService.calc_vacation_days(employee.date_hired, employee.type)
-        sick_days = EmployeeService.calc_sick_days(employee.date_hired)
+        vacation_days = EmployeeService.calc_vacation_days(parse_date(employee["date_hired"]), employee["type"])
+        sick_days = EmployeeService.calc_sick_days(parse_date(employee["date_hired"]))
+
 
         # VACATION DAYS
         # Query the database to check if employee already has stored vacation days for a given year
-        vacation_balance = session.exec(
-            select(LeaveBalance).where(
-                LeaveBalance.employee_id == employee.id,
-                LeaveBalance.year == year,
-                LeaveBalance.leave_type == LeaveType.VACATION
-            )
-        ).first()
+        vacation_balance = db.find_one("leave_balances", employee_id=employee["id"], year=year, leave_type=LeaveType.VACATION)
 
         # Update existing record incase leave policy has changed
         if vacation_balance:
-            vacation_balance.entitled_days = vacation_days
-            vacation_balance.remaining_days = vacation_days - vacation_balance.used_days
+            db.update_record("leave_balances", vacation_balance["id"],{
+                "entitled_days": vacation_days,
+                "remaining_days": vacation_days - vacation_balance["used_days"],
+                "last_updated": date.today()
+            })
         else:
-            vacation_balance = LeaveBalance(
-                employee_id = employee.id,
-                year = year,
-                leave_type = LeaveType.VACATION,
-                entitled_days = vacation_days,
-                remaining_days = vacation_days
-            )
-            session.add(vacation_balance)
+            db.create_record("leave_balances", {
+                "employee_id": employee["id"],
+                "year": year,
+                "leave_type": LeaveType.VACATION,
+                "entitled_days": vacation_days,
+                "used_days": 0,
+                "remaining_days": vacation_days,
+                "last_updated": date.today()
+            })
+
 
         # SICK DAYS
-        sick_balance = session.exec(
-            select(LeaveBalance).where(
-                LeaveBalance.employee_id == employee.id,
-                LeaveBalance.year == year,
-                LeaveBalance.leave_type == LeaveType.SICK
-            )
-        ).first()
+        sick_balance = db.find("leave_balances", employee_id=employee["id"], year=year, leave_type=LeaveType.SICK)
 
         if sick_balance:
-            sick_balance.entitled_days = sick_days
-            sick_balance.remaining_days = sick_days - sick_balance.used_days
+            db.update_record("leave_balances", sick_balance["id"], {
+                "entitled_days": sick_days,
+                "remaining_days": sick_days - sick_balance["used_days"],
+                "last_updated": date.today()
+            })
         else:
-            sick_balance = LeaveBalance(
-                employee_id=employee.id,
-                year=year,
-                leave_type=LeaveType.SICK,
-                entitled_days=sick_days,
-                remaining_days=sick_days
-            )
-            session.add(sick_balance)
-
-        session.commit()
+            db.create_record("leave_balances", {
+                "employee_id": employee["id"],
+                "year": year,
+                "leave_type": LeaveType.SICK,
+                "entitled_days": sick_days,
+                "used_days": 0,
+                "remaining_days": sick_days,
+                "last_updated": date.today()
+            })

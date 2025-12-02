@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, status, HTTPException
 from pydantic import BaseModel
-from sqlmodel import Session, select
-import datetime
-from app.models.employee import Employee
+from datetime import date
+import app.database as db
+
 from app.models.enums import PaymentType
-from app.database import init_session
 from app.services.employee_service import EmployeeService
 
 employee_router = APIRouter()
@@ -13,36 +12,31 @@ class EmployeeDto(BaseModel):
     name: str
     email: str
     type: PaymentType
-    date_hired: datetime.date
+    date_hired: date
 
+@employee_router.post("/employees", status_code=status.HTTP_201_CREATED)
+def add_employee(data: EmployeeDto):
+    if db.find_one("employees", email=data.email):
+        raise HTTPException(400, "Employee with this email already exists")
+
+    employee = db.create_record("employees", {
+        "name": data.name,
+        "email": data.email,
+        "type": data.type,
+        "date_hired": data.date_hired
+    })
+
+    EmployeeService.init_leave_balance(employee, date.today().year)
+    return {"Message": "Employee added successfully", "employee_id": employee["id"]}
+
+@employee_router.get("/employees/{employee_id}", status_code=status.HTTP_200_OK)
+def get_employee(employee_id: int):
+    employee = db.find_one("employees", id=employee_id)
+    if not employee:
+        raise HTTPException(404, "Employee not found")
+    return employee
 
 @employee_router.get("/employees", status_code=status.HTTP_200_OK)
-def get_employees(session: Session = Depends(init_session)):
-    """Retrieve all employees"""
-    employees = session.exec(select(Employee)).all()
+def list_employees():
+    employees = db.read_all_records("employees")
     return employees
-
-
-@employee_router.post("/employees/add", status_code=status.HTTP_201_CREATED)
-def add_employee(employee_data: EmployeeDto, session: Session = Depends(init_session)):
-    """Create an employee and initialize leave entitlements"""
-
-    # Check if employee already exists
-    existing = session.exec(
-        select(Employee).where(Employee.email == employee_data.email)
-    ).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Employee already exists")
-
-    employee = Employee(**employee_data.model_dump())
-    session.add(employee)
-    session.commit()
-    session.refresh(employee)
-
-    curr_year = datetime.date.today().year
-    EmployeeService.init_leave_balance(session, employee, curr_year)
-    return {
-        "message": "Employee Created"
-    }
-
-
