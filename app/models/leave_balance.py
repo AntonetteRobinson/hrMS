@@ -13,3 +13,7 @@ class LeaveBalance(BaseModel):
     used_days:int = 0
     remaining_days: int
     last_updated: date = Field(default_factory=date.today)
+
+    def leave_balance(self):
+        self.remaining_days = max(0, self.entitled_days - self.used_days)
+        return self.remaining_days
