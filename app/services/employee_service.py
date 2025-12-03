@@ -1,94 +1,113 @@
 from datetime import date
-
 import app.database as db
 from app.models.enums import PaymentType, LeaveType
-from app.models.leave_balance import LeaveBalance
+
 
 def parse_date(d) -> date:
-    """Convert string to date"""
+    """Ensures dates from JSON are converted back to date objects."""
     return date.fromisoformat(d) if isinstance(d, str) else d
 
 
 class EmployeeService:
-    """Handles calculations/logic related to an employee"""
+    """Handles calculations and initialization of employee leave balances."""
+
 
     @staticmethod
     def calc_years_of_service(date_hired: date) -> int:
-        """Calculates the years of service from the date dired"""
         today = date.today()
         years = today.year - date_hired.year
-        if today.month < date_hired.month or (today.month == date_hired.month and today.day < date_hired.day):
+
+        if (today.month, today.day) < (date_hired.month, date_hired.day):
             years -= 1
+
         return years
 
+ 
     @staticmethod
-    def calc_vacation_days(date_hired: date, pay_type: PaymentType):
-        """Calculates vacation days based on length of service and pay type"""
+    def calc_vacation_days(date_hired: date, pay_type: PaymentType) -> int:
         years = EmployeeService.calc_years_of_service(date_hired)
 
         if pay_type == PaymentType.FORTNIGHTLY:
             return 10 if years < 7 else 15
-        else:
-            if years < 5:
-                return 10
-            elif years < 10:
-                return 15
-            return 20
 
+        # Monthly employees
+        if years < 5:
+            return 10
+        elif years < 10:
+            return 15
+        return 20
+
+   
     @staticmethod
     def calc_sick_days(date_hired: date) -> int:
-        """Calculates sick days based on length of service"""
         years = EmployeeService.calc_years_of_service(date_hired)
         return 10 if years >= 1 else 0
 
+   
+    
     @staticmethod
     def init_leave_balance(employee: dict, year: int) -> None:
-        """Initializes/updates the leave balances for an employee for a given year"""
+        """
+        Ensures the employee has correct leave balances for the given year.
+        If record exists → update.
+        If record does not exist → create.
+        """
 
-        # Calculate the leave entitlements for employee
-        vacation_days = EmployeeService.calc_vacation_days(parse_date(employee["date_hired"]), employee["type"])
-        sick_days = EmployeeService.calc_sick_days(parse_date(employee["date_hired"]))
+        date_hired = parse_date(employee["date_hired"])
 
+        vacation_entitled = EmployeeService.calc_vacation_days(date_hired, employee["type"])
+        sick_entitled = EmployeeService.calc_sick_days(date_hired)
 
-        # VACATION DAYS
-        # Query the database to check if employee already has stored vacation days for a given year
-        vacation_balance = db.find_one("leave_balances", employee_id=employee["id"], year=year, leave_type=LeaveType.VACATION)
+        employee_id = employee["id"]
 
-        # Update existing record incase leave policy has changed
+        
+        vacation_balance = db.find_one(
+            "leave_balances",
+            employee_id=employee_id,
+            year=year,
+            leave_type=LeaveType.VACATION.value  # ALWAYS string in JSON
+        )
+
         if vacation_balance:
-            db.update_record("leave_balances", vacation_balance["id"],{
-                "entitled_days": vacation_days,
-                "remaining_days": vacation_days - vacation_balance["used_days"],
+            # Update existing record
+            db.update_record("leave_balances", vacation_balance["id"], {
+                "entitled_days": vacation_entitled,
+                "remaining_days": vacation_entitled - vacation_balance.get("used_days", 0),
                 "last_updated": date.today()
             })
         else:
+            # Create new record
             db.create_record("leave_balances", {
-                "employee_id": employee["id"],
+                "employee_id": employee_id,
                 "year": year,
-                "leave_type": LeaveType.VACATION,
-                "entitled_days": vacation_days,
+                "leave_type": LeaveType.VACATION.value,
+                "entitled_days": vacation_entitled,
                 "used_days": 0,
-                "remaining_days": vacation_days,
+                "remaining_days": vacation_entitled,
                 "last_updated": date.today()
             })
 
-
-        # SICK DAYS
-        sick_balance = db.find("leave_balances", employee_id=employee["id"], year=year, leave_type=LeaveType.SICK)
+       
+        sick_balance = db.find_one(
+            "leave_balances",
+            employee_id=employee_id,
+            year=year,
+            leave_type=LeaveType.SICK.value
+        )
 
         if sick_balance:
             db.update_record("leave_balances", sick_balance["id"], {
-                "entitled_days": sick_days,
-                "remaining_days": sick_days - sick_balance["used_days"],
+                "entitled_days": sick_entitled,
+                "remaining_days": sick_entitled - sick_balance.get("used_days", 0),
                 "last_updated": date.today()
             })
         else:
             db.create_record("leave_balances", {
-                "employee_id": employee["id"],
+                "employee_id": employee_id,
                 "year": year,
-                "leave_type": LeaveType.SICK,
-                "entitled_days": sick_days,
+                "leave_type": LeaveType.SICK.value,
+                "entitled_days": sick_entitled,
                 "used_days": 0,
-                "remaining_days": sick_days,
+                "remaining_days": sick_entitled,
                 "last_updated": date.today()
             })
