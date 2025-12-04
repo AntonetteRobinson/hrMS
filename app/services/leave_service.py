@@ -1,64 +1,152 @@
-from datetime import timedelta
-from app.models.enums import LeaveStatus, LeaveType
-from app.models.leave_balance import LeaveBalance
-from app.models.leave_request import LeaveRequest
+from datetime import date, timedelta
+from typing import Optional
+import app.database as db
+from app.models.enums import LeaveType, LeaveStatus
+from app.services.notification_service import NotificationService
+
 
 class LeaveService:
+    """Centralized leave processing: calculating days, approving, rejecting, updating balances"""
 
-    def __init__(self, employee_service):
-        self.employee_service = employee_service
+  
+    # CALCULATE LEAVE DAYS
+   
+    def calc_leave_days(self, start_date: date, end_date: date, leave_type: LeaveType) -> int:
+        if end_date < start_date:
+            raise ValueError("End date cannot be before start date.")
 
-    #Keeps count of working days
-    def working_days(self, start, end):
-        count = 0
+        # Vacation counts weekdays only
+        if leave_type == LeaveType.VACATION:
+            return self._working_days(start_date, end_date)
+
+        # Sick counts full calendar days
+        if leave_type == LeaveType.SICK:
+            return (end_date - start_date).days + 1
+
+        # Default inclusive
+        return (end_date - start_date).days + 1
+
+    def _working_days(self, start: date, end: date) -> int:
+        days = 0
         current = start
         while current <= end:
             if current.weekday() < 5:
-                count += 1
+                days += 1
             current += timedelta(days=1)
-        return count
+        return days
+
+   
+    # APPROVE REQUEST
+
+    def approve_request(self, request_id: int) -> dict:
+        request = db.read_record("leave_requests", request_id)
+        if not request:
+            raise ValueError("Leave request not found")
+
+        if request["status"] == LeaveStatus.APPROVED.value:
+            return {"message": "Already approved", "leave_request": request, "updated_balance": None}
+
+        # Parse stored dates
+        start = date.fromisoformat(request["start_date"])
+        end = date.fromisoformat(request["end_date"])
+        leave_type = LeaveType(request["leave_type"])
+
+        # Calculate leave days
+        days_requested = request.get("days_requested")
+        if days_requested is None:
+            days_requested = self.calc_leave_days(start, end, leave_type)
+
+        # Get leave balance
+        balance = db.find_one(
+            "leave_balances",
+            employee_id=request["employee_id"],
+            year=start.year,
+            leave_type=leave_type.value
+        )
+        if not balance:
+            raise ValueError("Leave balance not found")
+
+        if balance["remaining_days"] < days_requested:
+            raise ValueError("Not enough leave days")
+
+        # Deduct days
+        updated_balance = self._deduct_days(balance, days_requested)
+
+        # Update request status
+        db.update_record("leave_requests", request_id, {
+            "status": LeaveStatus.APPROVED.value,
+            "last_updated": date.today().isoformat()
+        })
+        updated_request = db.read_record("leave_requests", request_id)
+
+        # Notify employee
+        employee = db.find_one("employees", id=request["employee_id"])
+        NotificationService.notify_leave_status(employee, "APPROVED")
+
+        return {"leave_request": updated_request, "updated_balance": updated_balance}
+
+  
+    # REJECT REQUEST
     
-    #Leave calculator
-    def calc_leave_days(self, request: LeaveRequest, balance: LeaveBalance):
-        if request.leave_type == LeaveType.VACATION:
-            return self.working_days(request.start_date, request.end_date)
-        elif request.leave_type == LeaveType.SICK:
-            return (request.end_date - request.start_date) + 1
+    def reject_request(self, request_id: int) -> dict:
+        request = db.read_record("leave_requests", request_id)
+        if not request:
+            raise ValueError("Leave request not found")
 
-    #Leave balance check    
-    def has_enough(self, balance: LeaveBalance, days_needed):
-        return balance.remaining_days >= days_needed
-    
-    #Deducts leave days from balance
-    def deduct_leave(self, balance: LeaveBalance, days):
-        balance.used_days += days
-        balance.leave_balance()
-        self.employee_service.init_leave_balance(balance)
+        old_status = request["status"]
 
-    #Process leave requests
-    def process_leave_request(self, leave_request: LeaveRequest, balance: LeaveBalance):
-        #Validates leave requests
-        leave_request.validate_dates()
+        # Always update status
+        db.update_record("leave_requests", request_id, {
+            "status": LeaveStatus.REJECTED.value,
+            "last_updated": date.today().isoformat()
+        })
+        updated_request = db.read_record("leave_requests", request_id)
 
-        #Check if document is required
-        leave_request.req_sick_doc()
+        # If previously approved, restore days
+        updated_balance = None
 
-        #Calculates leave days requested
-        days_requested = self.calc_leave_days(leave_request)
+        if old_status == LeaveStatus.APPROVED.value:
+            start = date.fromisoformat(request["start_date"])
+            end = date.fromisoformat(request["end_date"])
+            leave_type = LeaveType(request["leave_type"])
+            days_requested = request["days_requested"]
 
-        #Validates remaining balance
-        if not self.has_enough(balance, days_requested):
-            raise ValueError("Insufficient leave balance.")
-        
-        #Deducts leave
-        self.deduct_leave(balance, days_requested)
+            balance = db.find_one(
+                "leave_balances",
+                employee_id=request["employee_id"],
+                year=start.year,
+                leave_type=leave_type.value
+            )
 
-        #Automatically updates request status to approved
-        leave_request.status = LeaveStatus.APPROVED
+            updated_balance = self._restore_days(balance, days_requested)
 
-        return{
-            "request_id": leave_request.id,
-            "days_deducted": days_requested,
-            "remaining_days": balance.remaining_days,
-            "status": leave_request.status
-        }
+        # Notify employee
+        employee = db.find_one("employees", id=request["employee_id"])
+        NotificationService.notify_leave_status(employee, "REJECTED")
+
+        return {"leave_request": updated_request, "updated_balance": updated_balance}
+
+  
+    # BALANCE UTILITIES
+
+    def _deduct_days(self, balance: dict, days: int) -> dict:
+        new_used = balance["used_days"] + days
+        new_remaining = balance["remaining_days"] - days
+
+        db.update_record("leave_balances", balance["id"], {
+            "used_days": new_used,
+            "remaining_days": new_remaining,
+            "last_updated": date.today().isoformat()
+        })
+        return db.read_record("leave_balances", balance["id"])
+
+    def _restore_days(self, balance: dict, days: int) -> dict:
+        new_used = max(0, balance["used_days"] - days)
+        new_remaining = balance["remaining_days"] + days
+
+        db.update_record("leave_balances", balance["id"], {
+            "used_days": new_used,
+            "remaining_days": new_remaining,
+            "last_updated": date.today().isoformat()
+        })
+        return db.read_record("leave_balances", balance["id"])
