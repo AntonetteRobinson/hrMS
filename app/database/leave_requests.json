@@ -1,0 +1,62 @@
+{
+    "1": {
+        "employee_id": 1,
+        "leave_type": "sick",
+        "start_date": "2025-12-04",
+        "end_date": "2025-12-07",
+        "days_requested": 4,
+        "status": "approved",
+        "date_requested": "2025-12-04",
+        "sick_document_id": 1,
+        "id": 1,
+        "last_updated": "2025-12-04"
+    },
+    "2": {
+        "employee_id": 2,
+        "leave_type": "sick",
+        "start_date": "2025-12-04",
+        "end_date": "2025-12-05",
+        "days_requested": 2,
+        "status": "approved",
+        "date_requested": "2025-12-04",
+        "sick_document_id": null,
+        "id": 2,
+        "last_updated": "2025-12-04"
+    },
+    "3": {
+        "employee_id": 2,
+        "leave_type": "vacation",
+        "start_date": "2025-12-04",
+        "end_date": "2025-12-06",
+        "days_requested": 2,
+        "status": "approved",
+        "date_requested": "2025-12-04",
+        "sick_document_id": null,
+        "id": 3,
+        "last_updated": "2025-12-04"
+    },
+    "4": {
+        "employee_id": 4,
+        "leave_type": "sick",
+        "start_date": "2025-12-04",
+        "end_date": "2025-12-10",
+        "days_requested": 7,
+        "status": "approved",
+        "date_requested": "2025-12-04",
+        "sick_document_id": 2,
+        "id": 4,
+        "last_updated": "2025-12-04"
+    },
+    "5": {
+        "employee_id": 1,
+        "leave_type": "vacation",
+        "start_date": "2025-12-04",
+        "end_date": "2025-12-15",
+        "days_requested": 8,
+        "status": "approved",
+        "date_requested": "2025-12-04",
+        "sick_document_id": null,
+        "id": 5,
+        "last_updated": "2025-12-04"
+    }
+}

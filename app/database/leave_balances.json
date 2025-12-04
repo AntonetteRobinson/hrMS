@@ -1,0 +1,82 @@
+{
+    "1": {
+        "employee_id": 1,
+        "year": 2025,
+        "leave_type": "vacation",
+        "entitled_days": 10,
+        "used_days": 8,
+        "remaining_days": 2,
+        "last_updated": "2025-12-04",
+        "id": 1
+    },
+    "2": {
+        "employee_id": 1,
+        "year": 2025,
+        "leave_type": "sick",
+        "entitled_days": 10,
+        "used_days": 4,
+        "remaining_days": 6,
+        "last_updated": "2025-12-04",
+        "id": 2
+    },
+    "3": {
+        "employee_id": 2,
+        "year": 2025,
+        "leave_type": "vacation",
+        "entitled_days": 10,
+        "used_days": 2,
+        "remaining_days": 8,
+        "last_updated": "2025-12-04",
+        "id": 3
+    },
+    "4": {
+        "employee_id": 2,
+        "year": 2025,
+        "leave_type": "sick",
+        "entitled_days": 10,
+        "used_days": 2,
+        "remaining_days": 8,
+        "last_updated": "2025-12-04",
+        "id": 4
+    },
+    "5": {
+        "employee_id": 3,
+        "year": 2025,
+        "leave_type": "vacation",
+        "entitled_days": 10,
+        "used_days": 0,
+        "remaining_days": 10,
+        "last_updated": "2025-12-04",
+        "id": 5
+    },
+    "6": {
+        "employee_id": 3,
+        "year": 2025,
+        "leave_type": "sick",
+        "entitled_days": 10,
+        "used_days": 0,
+        "remaining_days": 10,
+        "last_updated": "2025-12-04",
+        "id": 6
+    },
+    "7": {
+        "employee_id": 4,
+        "year": 2025,
+        "leave_type": "vacation",
+        "entitled_days": 10,
+        "used_days": 0,
+        "remaining_days": 10,
+        "last_updated": "2025-12-04",
+        "id": 7
+    },
+    "8": {
+        "employee_id": 4,
+        "year": 2025,
+        "leave_type": "sick",
+        "entitled_days": 10,
+        "used_days": 7,
+        "remaining_days": 3,
+        "last_updated": "2025-12-04",
+        "id": 8
+    }
+}
