@@ -58,5 +58,28 @@
         "sick_document_id": null,
         "id": 5,
         "last_updated": "2025-12-04"
+    },
+    "6": {
+        "employee_id": 1,
+        "leave_type": "sick",
+        "start_date": "2025-12-04",
+        "end_date": "2025-12-06",
+        "days_requested": 3,
+        "status": "pending",
+        "date_requested": "2025-12-04",
+        "sick_document_id": null,
+        "id": 6
+    },
+    "7": {
+        "employee_id": 1,
+        "leave_type": "sick",
+        "start_date": "2025-12-04",
+        "end_date": "2025-12-06",
+        "days_requested": 3,
+        "status": "approved",
+        "date_requested": "2025-12-04",
+        "sick_document_id": 3,
+        "id": 7,
+        "last_updated": "2025-12-04"
     }
 }

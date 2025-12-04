@@ -12,5 +12,12 @@
         "file_name": "620163576_CaseStudy.pdf",
         "uploaded_at": "2025-12-04",
         "id": 2
+    },
+    "3": {
+        "leave_request_id": 7,
+        "file_path": "app/uploads/sick_documents/Assignment 4 Final Project - Due Nov 26 (4).pdf",
+        "file_name": "Assignment 4 Final Project - Due Nov 26 (4).pdf",
+        "uploaded_at": "2025-12-04",
+        "id": 3
     }
 }
