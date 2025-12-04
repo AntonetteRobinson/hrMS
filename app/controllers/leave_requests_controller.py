@@ -7,6 +7,7 @@ import shutil
 import app.database as db
 from app.models.enums import LeaveType, LeaveStatus
 from app.services.leave_service import LeaveService
+from app.services.notification_service import NotificationService   # ✅ FIXED IMPORT
 
 leave_request_router = APIRouter()
 leave_service = LeaveService()
@@ -21,9 +22,9 @@ class LeaveRequestDto(BaseModel):
     start_date: date
     end_date: date
 
+
 class StatusUpdateDto(BaseModel):
     status: LeaveStatus
-
 
 
 # CREATE LEAVE REQUEST
@@ -74,21 +75,47 @@ def create_leave_request(data: LeaveRequestDto):
     }
 
 
-
-# APPROVE / REJECT REQUEST
-
+# ---------------------------------------------------------
+# APPROVE / REJECT REQUEST + NOTIFICATIONS
+# ---------------------------------------------------------
 @leave_request_router.patch("/leave-requests/{request_id}/status")
 def update_status(request_id: int, data: StatusUpdateDto):
 
+    request = db.read_record("leave_requests", request_id)
+    if not request:
+        raise HTTPException(404, "Leave request not found")
+
+    employee = db.read_record("employees", request["employee_id"])
+    if not employee:
+        raise HTTPException(404, "Employee not found")
+
+    # APPROVE
     if data.status == LeaveStatus.APPROVED:
         try:
-            return leave_service.approve_request(request_id)
+            result = leave_service.approve_request(request_id)
+
+            # 🔔 Send APPROVAL notification
+            NotificationService.notify_leave_status(employee, "Approved")
+
+            return {
+                "message": "Leave request approved",
+                "data": result
+            }
         except ValueError as e:
             raise HTTPException(400, str(e))
 
+    # REJECT
     elif data.status == LeaveStatus.REJECTED:
         try:
-            return leave_service.reject_request(request_id)
+            result = leave_service.reject_request(request_id)
+
+            # 🔔 Send REJECTION notification
+            NotificationService.notify_leave_status(employee, "Rejected")
+
+            return {
+                "message": "Leave request rejected",
+                "data": result
+            }
         except ValueError as e:
             raise HTTPException(400, str(e))
 
@@ -97,7 +124,7 @@ def update_status(request_id: int, data: StatusUpdateDto):
 
 
 # UPLOAD SICK DOCUMENT (only allowed when >2 days)
-#
+
 @leave_request_router.post("/leave-requests/{leave_request_id}/upload-sick-note")
 async def upload_sick_note(leave_request_id: int, file: UploadFile = File(...)):
 
